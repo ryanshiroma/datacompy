@@ -1,0 +1,4 @@
+DataFrame Summary
+-----------------
+
+{dataframe_summary}

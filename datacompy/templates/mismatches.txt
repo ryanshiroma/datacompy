@@ -1,0 +1,9 @@
+Columns with Unequal Values or Types
+------------------------------------
+
+{df_match_stats}
+
+Sample Rows with Unequal Values
+-------------------------------
+
+{sample_rows}

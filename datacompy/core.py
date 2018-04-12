@@ -425,6 +425,95 @@ class Compare(object):
         return to_return
 
 
+    def _report_header(self):
+        return render('header.txt')
+
+    def _report_dataframe_summary(self):
+        return render('dataframe_summary.txt', **{'dataframe_summary': pd.DataFrame({
+            'DataFrame': [self.df1_name, self.df2_name],
+            'Columns': [self.df1.shape[1], self.df2.shape[1]],
+            'Rows': [self.df1.shape[0], self.df2.shape[0]]})})
+
+    def _report_column_summary(self):
+        return render(
+            'column_summary.txt', **{
+                'number_in_common': len(self.intersect_columns()),
+                'df1_unq_col_count': len(self.df1_unq_columns()),
+                'df2_unq_col_count': len(self.df2_unq_columns()),
+                'df1_name': self.df1_name,
+                'df2_name': self.df2_name})
+
+    def _report_row_summary(self):
+        matched_on = 'index' if self.on_index else ', '.join(self.join_columns)
+        return render(
+            'row_summary.txt', **{
+                'matched_on': matched_on,
+                'abs_tol': self.abs_tol,
+                'rel_tol': self.rel_tol,
+                'rows_in_common': self.intersect_rows.shape[0],
+                'df1_unq_row_count': self.df1_unq_rows.shape[0],
+                'df2_unq_row_count': self.df2_unq_rows.shape[0],
+                'unequal_count': self.intersect_rows.shape[0] - self.count_matching_rows(),
+                'equal_count': self.count_matching_rows(),
+                'df1_name': self.df1_name,
+                'df2_name': self.df2_name,
+                'any_dupes': 'Yes' if self._any_dupes else 'No'})
+
+    def _report_column_comparison(self):
+        return render(
+            'column_comparison.txt', **{
+                'unequal_col_count':
+                    len([col for col in self.column_stats if col['unequal_cnt'] > 0]),
+                'equal_col_count':
+                    len([col for col in self.column_stats if col['unequal_cnt'] == 0]),
+                'unequal_values': sum([col['unequal_cnt'] for col in self.column_stats])})
+
+    def _report_mismatches(self, sample_count):
+        cnt_intersect = self.intersect_rows.shape[0]
+        match_stats = []
+        match_sample = []
+        any_mismatch = False
+        headers = [
+            'Column', '{} dtype'.format(self.df1_name), '{} dtype'.format(self.df2_name),
+            '# Unequal', 'Max Diff', '# Null Diff']
+        for column in self.column_stats:
+            if not column['all_match']:
+                any_mismatch = True
+                match_stats.append(dict(zip(headers, [
+                    column['column'],
+                    column['dtype1'],
+                    column['dtype2'],
+                    column['unequal_cnt'],
+                    column['max_diff'],
+                    column['null_diff']
+                    ])))
+                if column['unequal_cnt'] > 0:
+                    match_sample.append(self.sample_mismatch(
+                        column['column'], sample_count, for_display=True))
+
+        if any_mismatch:
+            df_match_stats = pd.DataFrame(match_stats)
+            df_match_stats.sort_values('Column', inplace=True)
+            sample_rows = '\n\n'.join(map(lambda x: x.to_string(), match_sample))
+            return render('mismatches.txt', **{
+                'df_match_stats': df_match_stats[headers], # For column order
+                'sample_rows': sample_rows
+                })
+        return ''
+
+    def _report_unique_rows(self, index, sample_count):
+        dataframe = getattr(self, '{index}_unq_rows'.format(index=index))
+        df_name = getattr(self, '{index}_name'.format(index=index))
+        if dataframe.shape[0] > 0:
+            columns = dataframe.columns[:10]
+            unq_count = min(sample_count, dataframe.shape[0])
+            return render('unique_rows.txt', **{
+                'df_name': df_name,
+                'df_name_dashes': '-' * len(df_name),
+                'sample_rows': dataframe.sample(unq_count)[columns]
+                })
+        return ''
+
     def report(self, sample_count=10):
         """Returns a string representation of a report.  The representation can
         then be printed or saved to a file.
@@ -437,118 +526,21 @@ class Compare(object):
         Returns
         -------
         str
-            The report, formatted kinda nicely.
+            The report, formatted as a human-readable string
         """
-        #Header
-        report = render('header.txt')
-        df_header = pd.DataFrame({
-            'DataFrame': [self.df1_name, self.df2_name],
-            'Columns': [self.df1.shape[1], self.df2.shape[1]],
-            'Rows': [self.df1.shape[0], self.df2.shape[0]]})
-        report += df_header[['DataFrame', 'Columns', 'Rows']].to_string()
-        report += '\n\n'
+        report_sections = [self._report_header()]
+        report_sections.append(self._report_dataframe_summary())
+        report_sections.append(self._report_column_summary())
+        report_sections.append(self._report_row_summary())
+        report_sections.append(self._report_column_comparison())
+        report_sections.append(self._report_mismatches(sample_count))
+        report_sections.append(self._report_unique_rows('df1', sample_count))
+        report_sections.append(self._report_unique_rows('df2', sample_count))
 
-        #Column Summary
-        report += render(
-            'column_summary.txt',
-            len(self.intersect_columns()),
-            len(self.df1_unq_columns()), len(self.df2_unq_columns()),
-            self.df1_name, self.df2_name)
-
-        #Row Summary
-        if self.on_index:
-            match_on = 'index'
-        else:
-            match_on = ', '.join(self.join_columns)
-        report += render(
-            'row_summary.txt',
-            match_on,
-            self.abs_tol,
-            self.rel_tol,
-            self.intersect_rows.shape[0],
-            self.df1_unq_rows.shape[0],
-            self.df2_unq_rows.shape[0],
-            self.intersect_rows.shape[0] - self.count_matching_rows(),
-            self.count_matching_rows(),
-            self.df1_name, self.df2_name,
-            'Yes' if self._any_dupes else 'No'
-            )
-
-        #Column Matching
-        cnt_intersect = self.intersect_rows.shape[0]
-        report += render(
-            'column_comparison.txt',
-            len([col for col in self.column_stats if col['unequal_cnt'] > 0]),
-            len([col for col in self.column_stats if col['unequal_cnt'] == 0]),
-            sum([col['unequal_cnt'] for col in self.column_stats])
-            )
-
-        match_stats = []
-        match_sample = []
-        any_mismatch = False
-        for column in self.column_stats:
-            if not column['all_match']:
-                any_mismatch = True
-                match_stats.append({
-                    'Column': column['column'],
-                    '{} dtype'.format(self.df1_name): column['dtype1'],
-                    '{} dtype'.format(self.df2_name): column['dtype2'],
-                    '# Unequal': column['unequal_cnt'],
-                    'Max Diff': column['max_diff'],
-                    '# Null Diff': column['null_diff']
-                    })
-                if column['unequal_cnt'] > 0:
-                    match_sample.append(self.sample_mismatch(
-                        column['column'], sample_count, for_display=True))
-
-        if any_mismatch:
-            report += 'Columns with Unequal Values or Types\n'
-            report += '------------------------------------\n'
-            report += '\n'
-            df_match_stats = pd.DataFrame(match_stats)
-            df_match_stats.sort_values('Column', inplace=True)
-            #Have to specify again for sorting
-            report += df_match_stats[[
-                'Column', '{} dtype'.format(self.df1_name),
-                '{} dtype'.format(self.df2_name),
-                '# Unequal', 'Max Diff', '# Null Diff']].to_string()
-            report += '\n\n'
-
-            report += 'Sample Rows with Unequal Values\n'
-            report += '-------------------------------\n'
-            report += '\n'
-            for sample in match_sample:
-                report += sample.to_string()
-                report += '\n\n'
-
-        if self.df1_unq_rows.shape[0] > 0:
-            report += 'Sample Rows Only in {} (First 10 Columns)\n'.format(
-                self.df1_name)
-            report += '---------------------------------------{}\n'.format(
-                '-' * len(self.df1_name))
-            report += '\n'
-            columns = self.df1_unq_rows.columns[:10]
-            unq_count = min(sample_count, self.df1_unq_rows.shape[0])
-            report += self.df1_unq_rows.sample(
-                unq_count)[columns].to_string()
-            report += '\n\n'
-
-        if self.df2_unq_rows.shape[0] > 0:
-            report += 'Sample Rows Only in {} (First 10 Columns)\n'.format(
-                self.df2_name)
-            report += '---------------------------------------{}\n'.format(
-                '-' * len(self.df2_name))
-            report += '\n'
-            columns = self.df2_unq_rows.columns[:10]
-            unq_count = min(sample_count, self.df2_unq_rows.shape[0])
-            report += self.df2_unq_rows.sample(
-                unq_count)[columns].to_string()
-            report += '\n\n'
-
-        return report
+        return '\n\n'.join(filter(lambda x: x.strip(), report_sections))
 
 
-def render(filename, *fields):
+def render(filename, **fields):
     """Renders out an individual template.  This basically just reads in a
     template file, and applies ``.format()`` on the fields.
 
@@ -557,7 +549,7 @@ def render(filename, *fields):
     filename : str
         The file that contains the template.  Will automagically prepend the
         templates directory before opening
-    fields : list
+    fields : dict
         Fields to be rendered out in the template
 
     Returns
@@ -567,7 +559,7 @@ def render(filename, *fields):
     """
     this_dir = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(this_dir, 'templates', filename)) as file_open:
-        return file_open.read().format(*fields)
+        return file_open.read().format(**fields)
 
 
 def columns_equal(col_1, col_2, rel_tol=0, abs_tol=0):
