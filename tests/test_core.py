@@ -37,219 +37,6 @@ except ImportError:
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-
-def test_numeric_columns_equal_abs():
-    data = '''a|b|expected
-1|1|True
-2|2.1|True
-3|4|False
-4|NULL|False
-NULL|4|False
-NULL|NULL|True'''
-    df = pd.read_csv(six.StringIO(data), sep='|')
-    actual_out = datacompy.columns_equal(df.a, df.b, abs_tol=0.2)
-    expect_out = df['expected']
-    assert_series_equal(expect_out, actual_out, check_names=False)
-
-def test_numeric_columns_equal_rel():
-    data = '''a|b|expected
-1|1|True
-2|2.1|True
-3|4|False
-4|NULL|False
-NULL|4|False
-NULL|NULL|True'''
-    df = pd.read_csv(six.StringIO(data), sep='|')
-    actual_out = datacompy.columns_equal(df.a, df.b, rel_tol=0.2)
-    expect_out = df['expected']
-    assert_series_equal(expect_out, actual_out, check_names=False)
-
-def test_string_columns_equal():
-    data = '''a|b|expected
-Hi|Hi|True
-Yo|Yo|True
-Hey|Hey |False
-résumé|resume|False
-résumé|résumé|True
-💩|💩|True
-💩|🤔|False
- | |True
-  | |False
-datacompy|DataComPy|False
-something||False
-|something|False
-||True'''
-    df = pd.read_csv(six.StringIO(data), sep='|')
-    actual_out = datacompy.columns_equal(df.a, df.b, rel_tol=0.2)
-    expect_out = df['expected']
-    assert_series_equal(expect_out, actual_out, check_names=False)
-
-
-def test_date_columns_equal():
-    data = '''a|b|expected
-2017-01-01|2017-01-01|True
-2017-01-02|2017-01-02|True
-2017-10-01|2017-10-10|False
-2017-01-01||False
-|2017-01-01|False
-||True'''
-    df = pd.read_csv(six.StringIO(data), sep='|')
-    #First compare just the strings
-    actual_out = datacompy.columns_equal(df.a, df.b, rel_tol=0.2)
-    expect_out = df['expected']
-    assert_series_equal(expect_out, actual_out, check_names=False)
-
-    #Then compare converted to datetime objects
-    df['a'] = pd.to_datetime(df['a'])
-    df['b'] = pd.to_datetime(df['b'])
-    actual_out = datacompy.columns_equal(df.a, df.b, rel_tol=0.2)
-    expect_out = df['expected']
-    assert_series_equal(expect_out, actual_out, check_names=False)
-    #and reverse
-    actual_out_rev = datacompy.columns_equal(df.b, df.a, rel_tol=0.2)
-    assert_series_equal(expect_out, actual_out_rev, check_names=False)
-
-
-
-def test_date_columns_unequal():
-    """I want datetime fields to match with dates stored as strings
-    """
-    df = pd.DataFrame([
-        {'a': '2017-01-01', 'b': '2017-01-02'},
-        {'a': '2017-01-01'}
-        ])
-    df['a_dt'] = pd.to_datetime(df['a'])
-    df['b_dt'] = pd.to_datetime(df['b'])
-    assert datacompy.columns_equal(df.a, df.a_dt).all()
-    assert datacompy.columns_equal(df.b, df.b_dt).all()
-    assert datacompy.columns_equal(df.a_dt, df.a).all()
-    assert datacompy.columns_equal(df.b_dt, df.b).all()
-    assert not datacompy.columns_equal(df.b_dt, df.a).any()
-    assert not datacompy.columns_equal(df.a_dt, df.b).any()
-    assert not datacompy.columns_equal(df.a, df.b_dt).any()
-    assert not datacompy.columns_equal(df.b, df.a_dt).any()
-
-
-def test_bad_date_columns():
-    """If strings can't be coerced into dates then it should be false for the
-    whole column.
-    """
-    df = pd.DataFrame([
-        {'a': '2017-01-01', 'b': '2017-01-01'},
-        {'a': '2017-01-01', 'b': '217-01-01'}
-        ])
-    df['a_dt'] = pd.to_datetime(df['a'])
-    assert not datacompy.columns_equal(df.a_dt, df.b).any()
-
-
-def test_rounded_date_columns():
-    """If strings can't be coerced into dates then it should be false for the
-    whole column.
-    """
-    df = pd.DataFrame([
-        {'a': '2017-01-01', 'b': '2017-01-01 00:00:00.000000', 'exp': True},
-        {'a': '2017-01-01', 'b': '2017-01-01 00:00:00.123456', 'exp': False},
-        {'a': '2017-01-01', 'b': '2017-01-01 00:00:01.000000', 'exp': False},
-        {'a': '2017-01-01', 'b': '2017-01-01 00:00:00', 'exp': True}
-        ])
-    df['a_dt'] = pd.to_datetime(df['a'])
-    actual = datacompy.columns_equal(df.a_dt, df.b)
-    expected = df['exp']
-    assert_series_equal(actual, expected, check_names=False)
-
-
-def test_decimal_float_columns_equal():
-    df = pd.DataFrame([
-        {'a': Decimal('1'), 'b': 1, 'expected': True},
-        {'a': Decimal('1.3'), 'b': 1.3, 'expected': True},
-        {'a': Decimal('1.000003'), 'b': 1.000003, 'expected': True},
-        {'a': Decimal('1.000000004'), 'b': 1.000000003, 'expected': False},
-        {'a': Decimal('1.3'), 'b': 1.2, 'expected': False},
-        {'a': np.nan, 'b': np.nan, 'expected': True},
-        {'a': np.nan, 'b': 1, 'expected': False},
-        {'a': Decimal('1'), 'b': np.nan, 'expected': False}
-        ])
-    actual_out = datacompy.columns_equal(df.a, df.b)
-    expect_out = df['expected']
-    assert_series_equal(expect_out, actual_out, check_names=False)
-
-
-def test_decimal_float_columns_equal_rel():
-    df = pd.DataFrame([
-        {'a': Decimal('1'), 'b': 1, 'expected': True},
-        {'a': Decimal('1.3'), 'b': 1.3, 'expected': True},
-        {'a': Decimal('1.000003'), 'b': 1.000003, 'expected': True},
-        {'a': Decimal('1.000000004'), 'b': 1.000000003, 'expected': True},
-        {'a': Decimal('1.3'), 'b': 1.2, 'expected': False},
-        {'a': np.nan, 'b': np.nan, 'expected': True},
-        {'a': np.nan, 'b': 1, 'expected': False},
-        {'a': Decimal('1'), 'b': np.nan, 'expected': False}
-        ])
-    actual_out = datacompy.columns_equal(df.a, df.b, abs_tol=0.001)
-    expect_out = df['expected']
-    assert_series_equal(expect_out, actual_out, check_names=False)
-
-
-def test_decimal_columns_equal():
-    df = pd.DataFrame([
-        {'a': Decimal('1'), 'b': Decimal('1'), 'expected': True},
-        {'a': Decimal('1.3'), 'b': Decimal('1.3'), 'expected': True},
-        {'a': Decimal('1.000003'), 'b': Decimal('1.000003'), 'expected': True},
-        {'a': Decimal('1.000000004'), 'b': Decimal('1.000000003'), 'expected': False},
-        {'a': Decimal('1.3'), 'b': Decimal('1.2'), 'expected': False},
-        {'a': np.nan, 'b': np.nan, 'expected': True},
-        {'a': np.nan, 'b': Decimal('1'), 'expected': False},
-        {'a': Decimal('1'), 'b': np.nan, 'expected': False}
-        ])
-    actual_out = datacompy.columns_equal(df.a, df.b)
-    expect_out = df['expected']
-    assert_series_equal(expect_out, actual_out, check_names=False)
-
-
-def test_decimal_columns_equal_rel():
-    df = pd.DataFrame([
-        {'a': Decimal('1'), 'b': Decimal('1'), 'expected': True},
-        {'a': Decimal('1.3'), 'b': Decimal('1.3'), 'expected': True},
-        {'a': Decimal('1.000003'), 'b': Decimal('1.000003'), 'expected': True},
-        {'a': Decimal('1.000000004'), 'b': Decimal('1.000000003'), 'expected': True},
-        {'a': Decimal('1.3'), 'b': Decimal('1.2'), 'expected': False},
-        {'a': np.nan, 'b': np.nan, 'expected': True},
-        {'a': np.nan, 'b': Decimal('1'), 'expected': False},
-        {'a': Decimal('1'), 'b': np.nan, 'expected': False}
-        ])
-    actual_out = datacompy.columns_equal(df.a, df.b, abs_tol=0.001)
-    expect_out = df['expected']
-    assert_series_equal(expect_out, actual_out, check_names=False)
-
-
-def test_infinity_and_beyond():
-    df = pd.DataFrame([
-        {'a': np.inf, 'b': np.inf, 'expected': True},
-        {'a': -np.inf, 'b': -np.inf, 'expected': True},
-        {'a': -np.inf, 'b': np.inf, 'expected': False},
-        {'a': np.inf, 'b': -np.inf, 'expected': False},
-        {'a': 1, 'b': 1, 'expected': True},
-        {'a': 1, 'b': 0, 'expected': False}
-        ])
-    actual_out = datacompy.columns_equal(df.a, df.b)
-    expect_out = df['expected']
-    assert_series_equal(expect_out, actual_out, check_names=False)
-
-
-def test_mixed_column():
-    df = pd.DataFrame([
-        {'a': 'hi', 'b': 'hi', 'expected': True},
-        {'a': 1, 'b': 1, 'expected': True},
-        {'a': np.inf, 'b': np.inf, 'expected': True},
-        {'a': Decimal('1'), 'b': Decimal('1'), 'expected': True},
-        {'a': 1, 'b': '1', 'expected': False},
-        {'a': 1, 'b': 'yo', 'expected': False}
-        ])
-    actual_out = datacompy.columns_equal(df.a, df.b)
-    expect_out = df['expected']
-    assert_series_equal(expect_out, actual_out, check_names=False)
-
-
 def test_compare_df_setter_bad():
     df = pd.DataFrame([{'a': 1, 'A': 2}, {'a': 2, 'A': 2}])
     with raises(TypeError, message='df1 must be a pandas DataFrame'):
@@ -345,7 +132,7 @@ def test_10k_rows():
     assert compare_no_tol.all_rows_overlap()
     assert not compare_no_tol.intersect_rows_match()
 
-@mock.patch('datacompy.logging.debug')
+@mock.patch('datacompy.core.logging.debug')
 def test_subset(mock_debug):
     df1 = pd.DataFrame([{'a': 1, 'b': 2, 'c': 'hi'}, {'a': 2, 'b': 2, 'c': 'yo'}])
     df2 = pd.DataFrame([{'a': 1, 'c': 'hi'}])
@@ -353,7 +140,7 @@ def test_subset(mock_debug):
     assert comp.subset()
     assert mock_debug.called_with('Checking equality')
 
-@mock.patch('datacompy.logging.info')
+@mock.patch('datacompy.core.logging.info')
 def test_not_subset(mock_info):
     df1 = pd.DataFrame([{'a': 1, 'b': 2, 'c': 'hi'}, {'a': 2, 'b': 2, 'c': 'yo'}])
     df2 = pd.DataFrame([{'a': 1, 'b': 2, 'c': 'hi'}, {'a': 2, 'b': 2, 'c': 'great'}])
@@ -440,36 +227,6 @@ def test_index_joining_non_overlapping():
     assert len(compare.df2_unq_rows) == 1
     assert list(compare.df2_unq_rows['a']) == ['back fo mo']
 
-
-def test_temp_column_name():
-    df1 = pd.DataFrame([{'a': 'hi', 'b': 2}, {'a': 'bye', 'b': 2}])
-    df2 = pd.DataFrame([{'a': 'hi', 'b': 2}, {'a': 'bye', 'b': 2}, {'a': 'back fo mo', 'b': 3}])
-    actual = datacompy.temp_column_name(df1, df2)
-    assert actual == '_temp_0'
-
-def test_temp_column_name_one_has():
-    df1 = pd.DataFrame([{'_temp_0': 'hi', 'b': 2}, {'_temp_0': 'bye', 'b': 2}])
-    df2 = pd.DataFrame([{'a': 'hi', 'b': 2}, {'a': 'bye', 'b': 2}, {'a': 'back fo mo', 'b': 3}])
-    actual = datacompy.temp_column_name(df1, df2)
-    assert actual == '_temp_1'
-
-def test_temp_column_name_both_have():
-    df1 = pd.DataFrame([{'_temp_0': 'hi', 'b': 2}, {'_temp_0': 'bye', 'b': 2}])
-    df2 = pd.DataFrame([{'_temp_0': 'hi', 'b': 2}, {'_temp_0': 'bye', 'b': 2}, {'a': 'back fo mo', 'b': 3}])
-    actual = datacompy.temp_column_name(df1, df2)
-    assert actual == '_temp_1'
-
-def test_temp_column_name_both_have():
-    df1 = pd.DataFrame([{'_temp_0': 'hi', 'b': 2}, {'_temp_0': 'bye', 'b': 2}])
-    df2 = pd.DataFrame([{'_temp_0': 'hi', 'b': 2}, {'_temp_1': 'bye', 'b': 2}, {'a': 'back fo mo', 'b': 3}])
-    actual = datacompy.temp_column_name(df1, df2)
-    assert actual == '_temp_2'
-
-def test_temp_column_name_one_already():
-    df1 = pd.DataFrame([{'_temp_1': 'hi', 'b': 2}, {'_temp_1': 'bye', 'b': 2}])
-    df2 = pd.DataFrame([{'_temp_1': 'hi', 'b': 2}, {'_temp_1': 'bye', 'b': 2}, {'a': 'back fo mo', 'b': 3}])
-    actual = datacompy.temp_column_name(df1, df2)
-    assert actual == '_temp_0'
 
 ### Duplicate testing!
 def test_simple_dupes_one_field():
