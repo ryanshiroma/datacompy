@@ -278,8 +278,8 @@ def test_report_outputs_the_column_summary(comparison1):
     assert '****** Column Summary ******' in stdout.getvalue()
     assert 'Number of columns in common with matching schemas: 3' in stdout.getvalue()
     assert 'Number of columns in common with schema differences: 1' in stdout.getvalue()
-    assert 'Number of columns in base but not compare: 1' in stdout.getvalue()
-    assert 'Number of columns in compare but not base: 1' in stdout.getvalue()
+    assert 'Number of columns in df1 but not df2: 1' in stdout.getvalue()
+    assert 'Number of columns in df2 but not df1: 1' in stdout.getvalue()
 
 
 def test_report_outputs_the_column_summary_for_identical_schemas(comparison2):
@@ -290,8 +290,8 @@ def test_report_outputs_the_column_summary_for_identical_schemas(comparison2):
     assert '****** Column Summary ******' in stdout.getvalue()
     assert 'Number of columns in common with matching schemas: 5' in stdout.getvalue()
     assert 'Number of columns in common with schema differences: 0' in stdout.getvalue()
-    assert 'Number of columns in base but not compare: 0' in stdout.getvalue()
-    assert 'Number of columns in compare but not base: 0' in stdout.getvalue()
+    assert 'Number of columns in df1 but not df2: 0' in stdout.getvalue()
+    assert 'Number of columns in df2 but not df1: 0' in stdout.getvalue()
 
 
 def test_report_outputs_the_column_summary_for_differently_named_columns(comparison3):
@@ -302,8 +302,8 @@ def test_report_outputs_the_column_summary_for_differently_named_columns(compari
     assert '****** Column Summary ******' in stdout.getvalue()
     assert 'Number of columns in common with matching schemas: 4' in stdout.getvalue()
     assert 'Number of columns in common with schema differences: 1' in stdout.getvalue()
-    assert 'Number of columns in base but not compare: 0' in stdout.getvalue()
-    assert 'Number of columns in compare but not base: 1' in stdout.getvalue()
+    assert 'Number of columns in df1 but not df2: 0' in stdout.getvalue()
+    assert 'Number of columns in df2 but not df1: 1' in stdout.getvalue()
 
 
 def test_report_outputs_the_row_summary(comparison1):
@@ -313,10 +313,10 @@ def test_report_outputs_the_row_summary(comparison1):
 
     assert '****** Row Summary ******' in stdout.getvalue()
     assert 'Number of rows in common: 4' in stdout.getvalue()
-    assert 'Number of rows in base but not compare: 1' in stdout.getvalue()
-    assert 'Number of rows in compare but not base: 1' in stdout.getvalue()
-    assert 'Number of duplicate rows found in base: 0' in stdout.getvalue()
-    assert 'Number of duplicate rows found in compare: 1' in stdout.getvalue()
+    assert 'Number of rows in df1 but not df2: 1' in stdout.getvalue()
+    assert 'Number of rows in df2 but not df1: 1' in stdout.getvalue()
+    assert 'Number of duplicate rows found in df1: 0' in stdout.getvalue()
+    assert 'Number of duplicate rows found in df2: 1' in stdout.getvalue()
 
 
 def test_report_outputs_the_row_equality_comparison(comparison1):
@@ -336,10 +336,10 @@ def test_report_outputs_the_row_summary_for_differently_named_columns(comparison
 
     assert '****** Row Summary ******' in stdout.getvalue()
     assert 'Number of rows in common: 5' in stdout.getvalue()
-    assert 'Number of rows in base but not compare: 0' in stdout.getvalue()
-    assert 'Number of rows in compare but not base: 0' in stdout.getvalue()
-    assert 'Number of duplicate rows found in base: 0' in stdout.getvalue()
-    assert 'Number of duplicate rows found in compare: 0' in stdout.getvalue()
+    assert 'Number of rows in df1 but not df2: 0' in stdout.getvalue()
+    assert 'Number of rows in df2 but not df1: 0' in stdout.getvalue()
+    assert 'Number of duplicate rows found in df1: 0' in stdout.getvalue()
+    assert 'Number of duplicate rows found in df2: 0' in stdout.getvalue()
 
 
 def test_report_outputs_the_row_equality_comparison_for_differently_named_columns(comparison3):
@@ -357,17 +357,17 @@ def test_report_outputs_column_detail_for_columns_in_only_one_dataframe(comparis
 
     comparison1.report(file=stdout)
     comparison1.report()
-    assert '****** Columns In Base Only ******' in stdout.getvalue()
+    assert '****** Columns In Df1 Only ******' in stdout.getvalue()
     r2 = r"""Column\s*Name \s* Dtype \n -+ \s+ -+ \ndate_fld \s+ date"""
     assert re.search(r2, str(stdout.getvalue()), re.X) is not None
 
 
-def test_report_outputs_column_detail_for_columns_in_only_compare_dataframe(comparison1):
+def test_report_outputs_column_detail_for_columns_in_only_df2_dataframe(comparison1):
     stdout = six.StringIO()
 
     comparison1.report(file=stdout)
     comparison1.report()
-    assert '****** Columns In Compare Only ******' in stdout.getvalue()
+    assert '****** Columns In Df2 Only ******' in stdout.getvalue()
     r2 = r"""Column\s*Name \s* Dtype \n -+ \s+ -+ \n accnt_purge \s+  boolean"""
     assert re.search(r2, str(stdout.getvalue()), re.X) is not None
 
@@ -379,7 +379,7 @@ def test_report_outputs_schema_difference_details(comparison1):
 
     assert '****** Schema Differences ******' in stdout.getvalue()
     assert re.search(
-        r"""Base\sColumn\sName \s+ Compare\sColumn\sName \s+ Base\sDtype \s+ Compare\sDtype \n
+        r"""df1\sColumn\sName \s+ df2\sColumn\sName \s+ df1\sDtype \s+ df2\sDtype \n
             -+ \s+ -+ \s+ -+ \s+ -+ \n
             dollar_amt \s+ dollar_amt \s+ bigint \s+ double""", stdout.getvalue(), re.X)
 
@@ -391,7 +391,7 @@ def test_report_outputs_schema_difference_details_for_differently_named_columns(
 
     assert '****** Schema Differences ******' in stdout.getvalue()
     assert re.search(
-        r"""Base\sColumn\sName \s+ Compare\sColumn\sName \s+ Base\sDtype \s+ Compare\sDtype \n
+        r"""df1\sColumn\sName \s+ df2\sColumn\sName \s+ df1\sDtype \s+ df2\sDtype \n
             -+ \s+ -+ \s+ -+ \s+ -+ \n
             dollar_amt \s+ dollar_amount \s+ bigint \s+ double""", stdout.getvalue(), re.X)
 
@@ -455,7 +455,7 @@ def test_columns_with_unequal_values_show_mismatch_counts(comparison1):
 
     assert '****** Columns with Unequal Values ******' in stdout.getvalue()
     assert re.search(
-        r"""Base\s*Column\s*Name \s+ Compare\s*Column\s*Name \s+ Base\s*Dtype \s+ Compare\sDtype \s*
+        r"""df1\s*Column\s*Name \s+ df2\s*Column\s*Name \s+ df1\s*Dtype \s+ df2\sDtype \s*
             \#\sMatches \s* \#\sMismatches \n
             -+ \s+ -+ \s+ -+ \s+ -+ \s+ -+ \s+ -+""", stdout.getvalue(), re.X)
     assert re.search(r"""dollar_amt \s+ dollar_amt \s+ bigint \s+ double \s+ 2 \s+ 2""", stdout.getvalue(), re.X)
@@ -470,7 +470,7 @@ def test_columns_with_different_names_with_unequal_values_show_mismatch_counts(c
 
     assert '****** Columns with Unequal Values ******' in stdout.getvalue()
     assert re.search(
-        r"""Base\s*Column\s*Name \s+ Compare\s*Column\s*Name \s+ Base\s*Dtype \s+ Compare\sDtype \s*
+        r"""df1\s*Column\s*Name \s+ df2\s*Column\s*Name \s+ df1\s*Dtype \s+ df2\sDtype \s*
             \#\sMatches \s* \#\sMismatches \n
             -+ \s+ -+ \s+ -+ \s+ -+ \s+ -+ \s+ -+""", stdout.getvalue(), re.X)
     assert re.search(r"""dollar_amt \s+ dollar_amount \s+ bigint \s+ double \s+ 2 \s+ 3""", stdout.getvalue(), re.X)
@@ -478,7 +478,7 @@ def test_columns_with_different_names_with_unequal_values_show_mismatch_counts(c
     assert re.search(r"""name \s+ name \s+ string \s+ string \s+ 4 \s+ 1""", stdout.getvalue(), re.X)
 
 
-def test_rows_only_base_returns_a_dataframe_with_rows_only_in_base(spark, comparison1):
+def test_rows_only_df1_returns_a_dataframe_with_rows_only_in_df1(spark, comparison1):
     # require schema if contains only 1 row and contain field value as None
     schema = StructType([StructField("acct", LongType(), True), StructField("date_fld", DateType(), True),
                          StructField("dollar_amt", LongType(), True),
@@ -488,17 +488,17 @@ def test_rows_only_base_returns_a_dataframe_with_rows_only_in_base(spark, compar
             date_fld=datetime.date(2017, 1, 1))
     ], schema)
 
-    assert comparison1.rows_only_base.count() == 1
-    assert expected_df.union(comparison1.rows_only_base).distinct().count() == 1
+    assert comparison1.rows_only_df1.count() == 1
+    assert expected_df.union(comparison1.rows_only_df1).distinct().count() == 1
 
 
-def test_rows_only_compare_returns_a_dataframe_with_rows_only_in_compare(spark, comparison1):
+def test_rows_only_df2_returns_a_dataframe_with_rows_only_in_df2(spark, comparison1):
     expected_df = spark.createDataFrame([
         Row(acct=10000001238, dollar_amt=1.05, name='Loose Seal Bluth', float_fld=111.0, accnt_purge=True)
     ])
 
-    assert comparison1.rows_only_compare.count() == 1
-    assert expected_df.union(comparison1.rows_only_compare).distinct().count() == 1
+    assert comparison1.rows_only_df2.count() == 1
+    assert expected_df.union(comparison1.rows_only_df2).distinct().count() == 1
 
 
 def test_rows_both_mismatch_returns_a_dataframe_with_rows_where_variables_mismatched(spark, comparison1):
@@ -659,7 +659,7 @@ def test_columns_with_unequal_values_text_is_aligned(comparison4):
         left_indices=(1, 2, 3, 4),
         right_indices=(5, 6),
         column_regexes=[
-            r"""(Base\sColumn\sName) \s+ (Compare\sColumn\sName) \s+ (Base\sDtype) \s+ (Compare\sDtype) \s+
+            r"""(df1\sColumn\sName) \s+ (df2\sColumn\sName) \s+ (df1\sDtype) \s+ (df2\sDtype) \s+
                 (\#\sMatches) \s+ (\#\sMismatches)""",
             r"""(-+) \s+ (-+) \s+ (-+) \s+ (-+) \s+ (-+) \s+ (-+)""",
             r"""(dollar_amt) \s+ (dollar_amt) \s+ (bigint) \s+ (double) \s+ (2) \s+ (2)""",
@@ -681,7 +681,7 @@ def test_columns_with_unequal_values_text_is_aligned_with_known_differences(comp
         left_indices=(1, 2, 3, 4),
         right_indices=(5, 6, 7),
         column_regexes=[
-            r"""(Base\sColumn\sName) \s+ (Compare\sColumn\sName) \s+ (Base\sDtype) \s+ (Compare\sDtype) \s+
+            r"""(df1\sColumn\sName) \s+ (df2\sColumn\sName) \s+ (df1\sDtype) \s+ (df2\sDtype) \s+
                 (\#\sMatches) \s+ (\#\sKnown\sDiffs) \s+ (\#\sMismatches)""",
             r"""(-+) \s+ (-+) \s+ (-+) \s+ (-+) \s+ (-+) \s+ (-+) \s+ (-+)""",
             r"""(stat_cd) \s+ (STATC) \s+ (string) \s+ (string) \s+ (2) \s+ (2) \s+ (1)""",
@@ -703,7 +703,7 @@ def test_columns_with_unequal_values_text_is_aligned_with_custom_known_differenc
         left_indices=(1, 2, 3, 4),
         right_indices=(5, 6, 7),
         column_regexes=[
-            r"""(Base\sColumn\sName) \s+ (Compare\sColumn\sName) \s+ (Base\sDtype) \s+ (Compare\sDtype) \s+
+            r"""(df1\sColumn\sName) \s+ (df2\sColumn\sName) \s+ (df1\sDtype) \s+ (df2\sDtype) \s+
                 (\#\sMatches) \s+ (\#\sKnown\sDiffs) \s+ (\#\sMismatches)""",
             r"""(-+) \s+ (-+) \s+ (-+) \s+ (-+) \s+ (-+) \s+ (-+) \s+ (-+)""",
             r"""(stat_cd) \s+ (STATC) \s+ (string) \s+ (string) \s+ (2) \s+ (2) \s+ (1)""",
@@ -725,7 +725,7 @@ def test_columns_with_unequal_values_text_is_aligned_for_decimals(comparison_dec
         left_indices=(1, 2, 3, 4),
         right_indices=(5, 6),
         column_regexes=[
-            r"""(Base\sColumn\sName) \s+ (Compare\sColumn\sName) \s+ (Base\sDtype) \s+ (Compare\sDtype) \s+
+            r"""(df1\sColumn\sName) \s+ (df2\sColumn\sName) \s+ (df1\sDtype) \s+ (df2\sDtype) \s+
                 (\#\sMatches) \s+ (\#\sMismatches)""",
             r"""(-+) \s+ (-+) \s+ (-+) \s+ (-+) \s+ (-+) \s+ (-+)""",
             r"""(dollar_amt) \s+ (dollar_amt) \s+ (decimal\(8,2\)) \s+ (double) \s+ (1) \s+ (1)"""
@@ -746,7 +746,7 @@ def test_schema_differences_text_is_aligned(comparison4):
         left_indices=(1, 2, 3, 4),
         right_indices=(),
         column_regexes=[
-            r"""(Base\sColumn\sName) \s+ (Compare\sColumn\sName) \s+ (Base\sDtype) \s+ (Compare\sDtype)""",
+            r"""(df1\sColumn\sName) \s+ (df2\sColumn\sName) \s+ (df1\sDtype) \s+ (df2\sDtype)""",
             r"""(-+) \s+ (-+) \s+ (-+) \s+ (-+)""",
             r"""(dollar_amt) \s+ (dollar_amt) \s+ (bigint) \s+ (double)"""
         ])
@@ -765,7 +765,7 @@ def test_schema_differences_text_is_aligned_for_decimals(comparison_decimal):
         left_indices=(1, 2, 3, 4),
         right_indices=(),
         column_regexes=[
-            r"""(Base\sColumn\sName) \s+ (Compare\sColumn\sName) \s+ (Base\sDtype) \s+ (Compare\sDtype)""",
+            r"""(df1\sColumn\sName) \s+ (df2\sColumn\sName) \s+ (df1\sDtype) \s+ (df2\sDtype)""",
             r"""(-+) \s+ (-+) \s+ (-+) \s+ (-+)""",
             r"""(dollar_amt) \s+ (dollar_amt) \s+ (decimal\(8,2\)) \s+ (double)"""
         ])
@@ -779,7 +779,7 @@ def test_base_only_columns_text_is_aligned(comparison4):
 
     text_alignment_validator(
         report=stdout,
-        section_start='****** Columns In Base Only ******',
+        section_start='****** Columns In Df1 Only ******',
         section_end='\n',
         left_indices=(1, 2),
         right_indices=(),
@@ -798,7 +798,7 @@ def test_compare_only_columns_text_is_aligned(comparison4):
 
     text_alignment_validator(
         report=stdout,
-        section_start='****** Columns In Compare Only ******',
+        section_start='****** Columns In Df2 Only ******',
         section_end='\n',
         left_indices=(1, 2),
         right_indices=(),

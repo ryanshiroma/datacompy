@@ -510,7 +510,7 @@ class SparkCompare(object):
         format_pattern = '{{:{df1}s}}  {{:{df2}s}}'.format(df1=df1_name_max, df2=df2_name_max)
 
         print("\n****** Schema Differences ******", file=myfile)
-        print((format_pattern + '  df1 Dtype     df2 Dtype').format('df1 Column Name', 'df2 Column Name'),
+        print((format_pattern + '  df1 Dtype      df2 Dtype').format('df1 Column Name', 'df2 Column Name'),
               file=myfile)
         print('-'*df1_name_max + '  ' + '-'*df2_name_max + "  -------------  -------------", file=myfile)
 
@@ -580,10 +580,10 @@ class SparkCompare(object):
                     align (Bool)    : true if right-aligned
         """
         headers_columns_unequal = [
-            ("DF1 Column Name", True, df1_name_max, False),
-            ("DF2 Column Name", True, df2_name_max, False),
-            ("DF1 Dtype   ", True, 13, False),
-            ("DF2 Dtype", True, 13, False),
+            ("df1 Column Name", True, df1_name_max, False),
+            ("df2 Column Name", True, df2_name_max, False),
+            ("df1 Dtype   ", True, 13, False),
+            ("df2 Dtype", True, 13, False),
             ("# Matches", True, 9, True),
             ("# Known Diffs", self._known_differences is not None, 13, True),
             ("# Mismatches", True, 12, True)
