@@ -122,13 +122,21 @@ class SparkCompare(object):
         have done some work deduping the input dataframes. If
         ``cache_intermediates=False``, the instantiation of this object is lazy.
     """
-
-    def __init__(self, spark_session, base_df, compare_df, join_columns, column_mapping=None,
-                 cache_intermediates=False, known_differences=None):
+    #### NEW CODE: adding arguments
+    def __init__(self, spark_session, base_df, compare_df, join_columns,rel_tol=0, abs_tol=0,column_mapping=None,
+                 cache_intermediates=False, known_differences=None,show_all_columns=False,match_rates=False):
+    ###############################
 
         self._original_base_df = base_df
         self._original_compare_df = compare_df
         self.cache_intermediates = cache_intermediates
+
+        self.rel_tol = rel_tol
+        self.abs_tol = abs_tol
+        if self.rel_tol<0 or self.abs_tol<0:
+            raise ValueError("Please enter positive valued tolerances")
+        self.show_all_columns=show_all_columns
+        self.match_rates=match_rates
 
         self.join_columns = self._tuplizer(join_columns)
         self._join_column_names = [name[0] for name in self.join_columns]
@@ -467,7 +475,12 @@ class SparkCompare(object):
         compare_dtype = [d[1] for d in self.compare_df.dtypes if d[0] == name][0]
 
         if _is_comparable(base_dtype, compare_dtype):
-            equal_comparisons.append('(A.{name}=B.{name})')
+
+            #equal_comparisons.append('(A.{name}=B.{name})')
+            if (base_dtype in NUMERIC_SPARK_TYPES) and (compare_dtype in NUMERIC_SPARK_TYPES ):#numeric tolerance comparison
+                equal_comparisons.append('((A.{name}=B.{name}) OR ((abs(A.{name}-B.{name}))<=('+str(self.abs_tol)+'+('+str(self.rel_tol)+'*abs(A.{name})))))')
+            else:#non-numeric comparison
+                equal_comparisons.append('((A.{name}=B.{name}))')
 
         if self._known_differences:
             new_input = "B.{name}"
@@ -595,9 +608,11 @@ class SparkCompare(object):
             ("# Known Diffs", self._known_differences is not None, 13, True),
             ("# Mismatches", True, 12, True)
         ]
+        if self.match_rates:
+            headers_columns_unequal.append(("Match Rate %",True, 12, True))
         headers_columns_unequal_valid = [h for h in headers_columns_unequal if h[1]]
         padding = 2  # spaces to add to left and right of each column
-
+        
         print("\n****** Columns with Unequal Values ******", file=myfile)
         format_pattern = (" "*padding).join(
             [('{:' + ('>' if h[3] else '') + str(h[2]) + '}') for h in headers_columns_unequal_valid])
@@ -609,10 +624,13 @@ class SparkCompare(object):
             num_known_diffs = None if self._known_differences is None else column_values[MatchType.KNOWN_DIFFERENCE.value]
             num_mismatches = column_values[MatchType.MISMATCH.value]
             compare_column = self._base_to_compare_name(column_name)
+            match_rate = 100*(1-(column_values[MatchType.MISMATCH.value]+0.0)/self.common_row_count+0.0)
 
             if num_mismatches or num_known_diffs:
                 output_row = [column_name, compare_column, base_types.get(column_name),
                               compare_types.get(column_name), str(num_matches), str(num_mismatches)]
+                if  self.match_rates:
+                    output_row.append('{:02.5f}'.format(match_rate))
                 if num_known_diffs is not None:
                     output_row.insert(len(output_row) - 1, str(num_known_diffs))
                 print(format_pattern.format(*output_row), file=myfile)
