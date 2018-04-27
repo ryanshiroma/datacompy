@@ -612,7 +612,7 @@ class SparkCompare(object):
             headers_columns_unequal.append(("Match Rate %",True, 12, True))
         headers_columns_unequal_valid = [h for h in headers_columns_unequal if h[1]]
         padding = 2  # spaces to add to left and right of each column
-        
+
         print("\n****** Columns with Unequal Values ******", file=myfile)
         format_pattern = (" "*padding).join(
             [('{:' + ('>' if h[3] else '') + str(h[2]) + '}') for h in headers_columns_unequal_valid])
