@@ -873,7 +873,7 @@ def test_columns_with_unequal_values_text_is_aligned_with_known_differences(comp
 
     comparison_kd1.report(file=stdout)
     stdout.seek(0)   # Back up to the beginning of the stream
-    print(stdout.getvalue())
+
     text_alignment_validator(
         report=stdout,
         section_start='****** Columns with Unequal Values ******',
@@ -895,7 +895,7 @@ def test_columns_with_unequal_values_text_is_aligned_with_custom_known_differenc
 
     comparison_kd2.report(file=stdout)
     stdout.seek(0)   # Back up to the beginning of the stream
-    print(stdout.getvalue())
+
     text_alignment_validator(
         report=stdout,
         section_start='****** Columns with Unequal Values ******',
